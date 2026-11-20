@@ -21,3 +21,15 @@
     {% endfor %}
   </div>
 {% endblock %}
+
+{% block sidebar %}
+  {{ block.super }}
+
+  {% if perms.catalog.change_book %}
+    <li><a href="{% url 'book-update' book.pk %}">Update Book</a></li>
+  {% endif %}
+    {% if perms.catalog.delete_book %}
+        <li><a href="{% url 'book-delete' book.pk %}">Delete Book</a></li>
+    {% endif %}
+
+{% endblock %}
