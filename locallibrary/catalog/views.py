@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 
 from .models import Book, Author, BookInstance, Genre
 
@@ -93,3 +94,13 @@ def renew_book_librarian(request, pk):
     }
 
     return render(request, 'catalog/book_renew_librarian.html', context)
+
+class LoanedBooksAllListView(LoginRequiredMixin, PermissionRequiredMixin, generic.ListView):
+    """Generic class-based view listing all books on loan. Only visible to users with can_mark_returned permission."""
+    model = BookInstance
+    permission_required = 'catalog.can_mark_returned' # Замените на ваше приложение, если оно называется иначе
+    template_name = 'catalog/bookinstance_list_borrowed_all.html'
+    paginate_by = 10
+
+    def get_queryset(self):
+        return BookInstance.objects.filter(status__exact='o').order_by('due_back')
