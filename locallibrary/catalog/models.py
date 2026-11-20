@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from datetime import date
 
 class Genre(models.Model):
@@ -48,46 +48,46 @@ class Book(models.Model):
         """
         Returns the url to access a particular book instance.
         """
-        return reverse('book-detail', args=[str(self.id)])
+        return reverse('book-detail', args=[str(object=self.id)])
 
 import uuid # Required for unique book instances
 
 class BookInstance(models.Model):
-    """
-    Model representing a specific copy of a book (i.e. that can be borrowed from the library).
-    """
-    title = models.CharField(max_length=200)
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, help_text="Unique ID for this particular book across whole library")
-    book = models.ForeignKey('Book', on_delete=models.SET_NULL, null=True)
+
+    """Model representing a specific copy of a book (i.e. that can be borrowed from the library)."""
+    title = models.CharField(max_length=200 )
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4,
+                          help_text="Unique ID for this particular book across whole library")
+    book = models.ForeignKey('Book', on_delete=models.RESTRICT, null=True)
     imprint = models.CharField(max_length=200)
     due_back = models.DateField(null=True, blank=True)
-    borrower = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    borrower = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
 
-    LOAN_STATUS = (
-        ('m', 'Maintenance'),
-        ('o', 'On loan'),
-        ('a', 'Available'),
-        ('r', 'Reserved'),
+    class LoanStatus(models.TextChoices):
+        MAINTENANCE = 'm', 'Maintenance'
+        ON_LOAN = 'o', 'On loan'
+        AVAILABLE = 'a', 'Available'
+        RESERVED = 'r', 'Reserved'
+
+    status = models.CharField(
+        max_length=1,
+        choices=LoanStatus,
+        blank=True,
+        default=LoanStatus.MAINTENANCE,
+        help_text='Book availability',
     )
 
-    status = models.CharField(max_length=1, choices=LOAN_STATUS, blank=True, default='m', help_text='Book availability')
-
     class Meta:
-        ordering = ["due_back"]
-        permissions = (("can_mark_returned", "Set book as returned"),)
-
+        ordering = ['due_back']
 
     def __str__(self):
-        """
-        String for representing the Model object
-        """
-        return '%s (%s)' % (self.id,self.book.title)
+        """String for representing the Model object."""
+        return f'{self.id} ({self.book.title})'
 
     @property
     def is_overdue(self):
-        if self.due_back and date.today() > self.due_back:
-            return True
-        return False
+        """Determines if the book is overdue based on due date and current date."""
+        return bool(self.due_back and date.today() > self.due_back)
 
 class Author(models.Model):
     """
